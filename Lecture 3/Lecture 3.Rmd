@@ -1,0 +1,368 @@
+---
+title: "R을 이용한 통계 기초와 데이터 분석"
+subtitle: "Lecture 3"
+author : "남현진"
+institute: "한성대학교"
+date: "2020"
+encoding: UTF-8
+header-includes:
+- \linespread{1.5} \setbeamertemplate{page number in head/foot}{}
+classoption: dvipsnames
+mainfont: NanumGothic #NanumGothic, 
+fontsize: 8 pt
+output:
+  beamer_presentation:
+    theme: "Boadilla"
+    colortheme: "dolphin"
+    latex_engine: xelatex
+---
+
+
+# Ggplot2
+```{r include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(ISLR)
+library(RCurl)
+
+RW <- function(N, x0, mu, variance) {
+  z<-cumsum(rnorm(n=N, mean=0, 
+                  sd=sqrt(variance)))
+  t<-1:N
+  x<-x0+t*mu+z
+  return(x)
+  }
+# mu is the drift
+
+P1<-RW(100,10,0,0.0004)
+
+
+data <- data.frame(time = rep( 1:100, times = 4),
+                  variable = rep( c('A','B','C','D'), each = 100),
+                  value = c(RW(100,10,0,0.4),
+                            RW(100,10,0,0.1),
+                            RW(100,10,0,0.2),
+                            RW(100,10,0,0.3)))
+```
+
+
+
+
+
+## 왜 Ggplot2을 사용하는가
+쉬운 코딩을 가지고 좋은 디자인의 시각화를 위해서는 ggplot2를 사용하는 것이 효율적이다. 우선, 예시를 통해 그래프를 기본 패키지로 그리는 코드와 ggplot을 이용한 코드로 비교해 보며 ggplot에 대해 알아보자.
+```{r, echo = TRUE, cache = T,collapse = T}
+head(data)
+```
+
+## 왜 Ggplot2을 사용하는가
+Ggplot2을 사용했을 때
+```{r eval=FALSE, cache=TRUE, collapse=FALSE, include=TRUE}
+ggplot(data) +
+  geom_line( aes(x = time, y = value, color = variable))
+```
+
+Ggplot2을 사용하지 않았을 때 
+```{r eval=FALSE, cache=TRUE, collapse=FALSE, include=TRUE}
+# Using base graphics
+plot(data$time[data$variable == "A"], data$value[data$variable == "A"],
+     type = "l", col = 1, ylim = c(min(data$value), max(data$value)),
+     ylab = "value", xlab = "time")
+for (i in 2:4) {
+lines(data$time[data$variable == unique(data$variable)[i]],
+        data$value[data$variable == unique(data$variable)[i]], col = i)
+legend("topleft", legend = c("A", "B", "C", "D"), col = 1:4, lty = 1)}
+```
+
+
+## 왜 Ggplot2을 사용하는가
+Ggplot2을 사용했을 때
+```{r echo=FALSE,  fig.align = "center", fig.width = 6, fig.height = 4, out.width = "90%"} 
+ggplot(data) +
+  geom_line( aes(x = time, y = value, color = variable))
+
+```
+
+## 왜 Ggplot2을 사용하는가
+Ggplot2을 사용하지 않았을 때 
+```{r echo=FALSE,  fig.align = "center", out.width = "80%"} 
+# Using base graphics
+plot(data$time[data$variable == "A"], data$value[data$variable == "A"],
+     type = "l", col = 1, ylim = c(min(data$value), max(data$value)),
+     ylab = "value", xlab = "time")
+for (i in 2:4) {
+lines(data$time[data$variable == unique(data$variable)[i]],
+        data$value[data$variable == unique(data$variable)[i]], col = i)
+legend("topleft", legend = c("A", "B", "C", "D"), col = 1:4, lty = 1)}
+
+```
+
+
+## Introduction
+Ggplot2는 ”grammar of graphics”이다. Ggplot2는 빈 캔버스에 geoms을 추가하고, 다른 요소들을 레이어로 더해서 플롯을 완성하는 방식이다. 레이어링 할 수 있는 요소들은 다음과 같다(이외에도 더 많은 요소들이 있다. cheatsheet 참조).
+
+- Data: 시각화하려는 데이터를 의미한다.
+- Geometrics: 데이터를 표현하는 플랏의 종류를 의미한다. 산점도의 점, 그래프의 막대나 선 같이 데이터를 매핑하는 모양이라 할 수 있다.
+- Aesthetics : 축의 스케일, 색상, 채우기 등 미학적 속성을 의미한다.
+- Labs: x축의 이름, y축의 이름, 제목 등 플랏의 설명이 들어가는 요소이다.
+
+## Introduction
+- Geometric objects
+  - geom_point: 산점도
+  - geom_bars: 막대 그래프
+  - geom_histograms: 히스토그램
+  - geom_density: 확률 분포도
+  - geom_boxplots: 상자그림
+  - geom_lines: 선 그래프
+
+- Aesthetics
+  - x: x축
+  - y: y축
+  - color: 선의 색상
+  - fill: 채우기 색상
+  - shape: 포인트의 모양
+  - size: 크기
+  - linetypes: 선 종류
+  - alpha: 투명도
+
+
+
+
+## Introduction
+```{r eval=FALSE, cache=TRUE, collapse=FALSE, include=TRUE}
+ggplot(data = <DATA>) +
+  <Geometric objects>(mapping = aes(<Aesthetics>)) +
+  labs(y = <The text for y axis>,
+       x= <The text for x axis>, 
+       title=<The text for the title.>,
+       subtitle = <	The text for the sub-title.>)
+```
+ - 데이터 DATA 를 사용해서 그래프를 그린다.
+ - Geometric objects에 해당하는 종류의 그래프를 그린다.
+ - 원하는 표현 방식을 Aesthetics 적는다.
+ 
+
+ 
+## Introduction
+Wage 데이터를 사용해서 나이와 임금의 상관관계를 알아보자.
+```{r echo = TRUE, cache = T,collapse = T}
+Wage %>%
+  select(age, wage) %>%
+  head(5)
+```
+
+
+
+## Scatterplots
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+ggplot(data = Wage) +
+  geom_point(mapping = aes(x = age, y = wage))
+```
+
+## Scatterplots
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) +
+  geom_point(mapping = aes(x = age, y = wage, color = education))
+```
+## Scatterplots
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) +
+  geom_point(mapping = aes(x = age, y = wage, color = education, shape = education))
+```
+
+## Multiple layer
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) +
+  geom_point(mapping = aes(x = age, y = wage, col = education)) +
+  facet_wrap(~ education)
+```
+
+## Bar chart
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_bar(mapping = aes(education, fill=education))
+```
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_bar(mapping = aes(education, col=education))
+```
+
+## Bar chart
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_bar(mapping = aes(education, fill=education), width = 1) + 
+  coord_polar()
+```
+
+## Histogram
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_histogram(mapping = aes(wage))
+```
+
+## Histogram
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_histogram(mapping = aes(wage), binwidth =  30)
+```
+## Density
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_density(mapping = aes(x = wage, y = ..density..))
+```
+
+## Density
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_density(mapping = aes(x = wage, y = ..density.., col = education))
+```
+
+## Density
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_density(mapping = aes(x = wage, y = ..density.., fill = education),
+               alpha = 0.8)
+```
+
+## Box plot
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "70%"}
+ggplot(data = Wage) + 
+  geom_boxplot(mapping = aes(x = education, y = wage, fill = education))
+```
+
+## Line
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "80%",out.height = "50%"}
+Wage1 <- Wage %>%
+  group_by(education, age) %>%
+  summarise(wage_median = median(wage))
+
+ggplot(data = Wage1) + 
+  geom_line(mapping = aes(x = age, y = wage_median, color = education))
+
+```
+
+## scatter
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 8, fig.height = 4, fig.align = "center",out.width = "90%",out.height = "60%"}
+ggplot(data = Wage) + 
+  geom_point(mapping = aes(x = age, y = wage, color = education),  size = 0.4) + 
+  stat_smooth(aes(x = age, y = wage, color = education), method='loess')
+```
+
+
+# 실습
+# Covid 데이터
+
+## 데이터 불러오기
+read.csv 함수를 이용해서 데이터를 불러온다. 현재 R이 사용하고 있는 디렉토리는 getwd()로 확인할 수 있으며 디렉토리 변경은 setwd()를 이용하면 된다.
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+getwd()
+#setwd()
+covid.data <- read.csv('covid_data.csv')
+```
+
+## 데이터 탐색
+오늘 사용하게 될 데이터는 전세계의 나라 별 코로나 확진자 수이다. 변수는 총 3가지로 나라, 첫 확진자 발생일을 기준으로 경과 일, 그리고 확진자 수이다. 
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+str(covid.data)
+```
+
+나라들의 이름의 상위 15개 값을 살펴보면 다음과 같다.
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+unique(covid.data$Country) %>% head(15)
+```
+
+## 데이터 탐색
+데이터의 상위 7개의 값은 다음과 같다.
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+head(covid.data, 7)
+```
+## 데이터 탐색
+우리나라의 데이터를 뽑아서 살펴보자.
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+
+country <- 'Korea, South'
+country.data <- covid.data %>%
+  filter(Country == country)
+
+head(country.data)
+```
+## 데이터 그리기
+우리나라의 코로나 확진자 수를 그래프로 그려보자.
+```{r echo=TRUE, fig.align="center", fig.height=4, , fig.width=6, cache=TRUE, collapse=T}
+covid_korea <- ggplot(country.data) + 
+  geom_line(aes(x = Day, y = N)) +
+  geom_point(aes(x = Day, y = N)) +
+   labs(y = 'Number of confirmed cases',x="Day since first case", 
+         title="The number of COVID-19 confirmed cases",
+         subtitle = country)
+```
+
+## 데이터 그리기
+```{r, echo = TRUE, cache = T,collapse = T , , fig.width = 6, fig.height = 4, fig.align = "center",out.width = "70%",out.height = "70%"}
+covid_korea
+```
+## 데이터 그리기
+png 이용하면 ggplot을 로컬 파일로 저장할 수 있다. 원하는 플랏들을 프린트한 후 dev.off()를 사용하면 저장이 멈춘다.
+```{r eval=FALSE, cache=TRUE, collapse=FALSE, include=TRUE}
+png("covid_korea.png")
+print(covid_korea)
+dev.off()
+```
+
+## 데이터 그리기
+반복문을 사용해서 나라별 코로나 확진자 수를 그래프로 그려보자. 
+```{r ,  size = 3}
+country.list <- unique(covid.data$Country)
+pdf('covid.pdf')
+for(i in 1:length(country.list)){
+  country <- country.list[i]
+  country.data <- covid.data %>%
+    filter(Country == country)
+  forecast.plot <- ggplot(country.data) + 
+    geom_line(aes(x = Day, y = N)) +
+    geom_point(aes(x = Day, y = N)) +
+    labs(y = 'Number of confirmed cases',x="Day since first case", 
+         title="The number of COVID-19 confirmed cases",
+         subtitle = country)
+  print(forecast.plot)
+}
+dev.off()
+```
+
+
+## 데이터 그리기
+링크 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv' 를 이용하면 매일 업데이트되는 코로나 데이터를 가져올 수 있다.
+```{r}
+url <- 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv'
+link <- getURL(url)
+data <- read.csv(text = link)
+
+data <- data %>%
+  select(-Province.State,-Lat, -Long) %>%
+  group_by(Country.Region) %>%
+  summarise_all(sum, na.rm = TRUE) 
+
+country.list <- unique(data$Country.Region)
+data.final <- data.frame()
+forecast.final <- data.frame()
+```
+
+## 데이터 그리기
+```{r}
+for(i in 1:length(country.list)){
+  country <- country.list[i]
+  country.data <- data %>%
+    filter( Country.Region == country) %>%
+    select(-Country.Region)
+  
+  first_day <- min(which(country.data > 0))
+  last_day <-  ncol(country.data)
+  N <- country.data[,first_day:last_day] %>% t() %>% as.vector()
+  day <- seq(from = 1, to = last_day - first_day + 1, by = 1)
+  country.data <- data.frame( Country = country,Day = day, N = N)
+  data.final <- rbind(data.final, country.data)
+}
+
+data.final <- as.data.frame(data.final)
+write.csv(data.final, 'covid_data.csv', row.names =  F)
+```
