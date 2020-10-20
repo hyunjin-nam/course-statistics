@@ -1,0 +1,218 @@
+---
+title: "R을 이용한 통계 기초와 데이터 분석"
+subtitle: "Lecture 7"
+author : "남현진"
+institute: "한성대학교"
+date: "2020"
+encoding: UTF-8
+header-includes:
+- \linespread{1.5} \setbeamertemplate{page number in head/foot}{}
+classoption: dvipsnames
+mainfont: NanumGothic #NanumGothic, 
+fontsize: 8 pt
+output:
+  beamer_presentation:
+    theme: "Boadilla"
+    colortheme: "dolphin"
+    latex_engine: xelatex
+---
+
+
+
+# 데이터
+오늘 사용할 데이터는 200개의 세일즈 데이터로 판매 액(천 단위 달러)과 매체 별 광고 지출비가 천단위 달러로 포함되어있다. 매체는 총 세가지로 TV, Radio, 그리고 Newspaper가 있다. 
+```{r}
+data <- read.csv('data.csv') 
+str(data)
+```
+
+# 데이터
+```{r, echo = TRUE, cache = T,collapse = T ,fig.align = "center",out.width = "80%",out.height = "80%"}
+plot(data)
+```
+
+
+# 데이터
+데이터를 6:3 비율로 train 데이터와 test 데이터로 나누어준다.
+```{r}
+set.seed(123)
+sample <- sample(c(TRUE, FALSE), nrow(data), replace = T, prob = c(0.6,0.4))
+train <- data[sample, ]
+test <- data[!sample, ]
+```
+
+# 단순 선형 회귀 
+우선 train 데이터를 가지고 TV 광고 지출액과 매출간의 관계를 알아보자.
+```{r, echo = TRUE, cache = T,collapse = T , fig.align = "center",out.width = "60%",out.height = "60%"}
+ggplot(train, aes(TV, Sales)) +
+  geom_point()
+```
+
+# 단순 선형 회귀 
+TV 광고 지출액과 매출간의 관계를 보여줄 수 있는 단순 선형 회귀 모형을 만들어보자.
+```{r }
+library(broom)
+library(modelr)
+library(ggplot2)
+model1 <- lm(Sales ~ TV, data = train)
+model1_results <- augment(model1, train)
+```
+
+# 단순 선형 회귀 
+\small
+```{r , echo = TRUE, cache = T,collapse = T , fig.width = 7, fig.height = 3, fig.align = "center",out.width = "70%",out.height = "50%"}
+summary(model1)
+```
+\normalsize
+
+# 단순 선형 회귀 
+단순 선형 회귀 모형 Model1을 산점도에 올려보면 다음과 같다. 
+```{r fig.show='hide' }
+ggplot(train, aes(TV, Sales)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+```
+
+# 단순 선형 회귀 
+```{r echo=F, fig.align="center", message=T, warning=T, cache=F, collapse=F, out.width="80%"  }
+ggplot(train, aes(TV, Sales)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+```
+
+
+# 단순 선형 회귀 
+Residuals vs Fitted 플랏은 X 축이 선형 회귀로 예측된 Y 값이며 Y 축에는 잔차를 보여준다. 선형 회귀에서 오차는 평균이 0이고 분산이 일정한 정규 분포를 가정하였으므로, 예측된 Y 값과 무관하게 잔차의 평균은 0이고 분산은 일정해야 한다. 따라서 이 그래프에서는 기울기 0인 직선이 관측되는 것이 이상적이다.
+
+```{r fig.show='hide'}
+model1_plot1 <- ggplot(model1_results, aes(.fitted, .resid)) +
+  geom_ref_line(h = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  ggtitle("Residuals vs Fitted")
+```
+
+# 단순 선형 회귀 
+```{r echo=F, fig.align="center", message=T, warning=T, cache=F, collapse=F, out.width="80%"  }
+model1_plot1 <- ggplot(model1_results, aes(.fitted, .resid)) +
+  geom_ref_line(h = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  ggtitle("Residuals vs Fitted")
+model1_plot1
+```
+
+# 단순 선형 회귀 
+Normal Q-Q는 잔차가 정규 분포를 따르는지 확인하기 위한 Q-Q Plot을 보여준다. 즉 잔차의 분포의 quantile 값과 정규 분포의 quantile 값들을 비교해주는 플랏인데 만약 점들이 선형의 직선위에 올라와 있다면 잔차가 정규성을 따른다고 말할 수 있다. 
+
+```{r fig.show='hide'}
+model1_plot2 <- ggplot( model1_results, aes( sample = .resid)) +
+  stat_qq()+
+  stat_qq_line() +
+  ggtitle("Normal Q-Q")
+```
+# 단순 선형 회귀 
+```{r echo=F, fig.align="center", message=T, warning=T, cache=F, collapse=F, out.width="80%"  }
+
+model1_plot2 <- ggplot( model1_results, aes( sample = .resid)) +
+  stat_qq()+
+  stat_qq_line() +
+  ggtitle("Normal Q-Q")
+model1_plot2
+```
+
+
+# 단순 선형 회귀
+TV 광고 지출액을 가지고 만든 단순 회귀 모형을 이용해 테스트 데이터의 매출액을 예측해보자. MSE는 예측한 값의 오차 제곱 합을 나타내는데 이는 회귀 모형이 테스트에 얼마나 잘 적합되었는지를 보여주는 비용함수이다. MSE 값이 작으면 작을수록 모델이 잘 적합도었다고 말할 수 있다.
+```{r}
+pred1 <- predict(model1, test)
+test$Pred1 <- pred1
+mse1 <- mean((test$Sales - test$Pred1)^2)
+mse1
+```
+
+# 다중 선형 회귀
+앞에서 만든 단순 선형 회귀 분석에 다른 변수들 또한 추가해서 다중 선형 회귀 모형을 만들어 보자. 
+```{r}
+model2 <- lm(Sales ~ ., data = train)
+model2 <- lm(Sales ~ TV + Radio + Newspaper + Sales, data = train)
+```
+
+
+# 다중 선형 회귀 
+\footnotesize
+```{r , echo = TRUE, cache = T,collapse = T , fig.width = 7, fig.height = 3, fig.align = "center",out.width = "70%",out.height = "50%"}
+summary(model2)
+```
+\normalsize
+
+
+# 다중 선형 회귀 
+앞에서 만든 다중 선형 회귀 모형 model2에서 유의하지 않다고 나온 Newspaper를 변수에서 제거한 새로운 다중 선형 회귀 모형을 만들어 보자.
+```{r}
+model3 <- lm(Sales ~ TV + Radio , data = train)
+model3_results <- augment(model3, train)
+```
+
+# 다중 선형 회귀 
+\footnotesize
+```{r , echo = TRUE, cache = T,collapse = T , fig.width = 7, fig.height = 3, fig.align = "center",out.width = "70%",out.height = "50%"}
+summary(model3)
+```
+\normalsize
+
+
+# 다중 선형 회귀 
+Model3을 이용해서 Residuals vs Fitted 플랏을 그려보자. Model3의 결과는 Model1 보다 F통계량과 $R^2$ 측면에서는 좋아보였지만 단차의 측면에서는 Model1이 조금 더 이상적인 모습을 보여준다. 잔차의 분산은 일정하지 않은 모습을 보이고 있다. 
+```{r fig.show='hide'}
+model3_plot1 <- ggplot(model3_results, aes(.fitted, .resid)) +
+  geom_ref_line(h = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  ggtitle("Residuals vs Fitted")
+```
+
+# 다중 선형 회귀 
+```{r echo=FALSE, fig.align="center", message=FALSE, warning=FALSE, cache=TRUE, collapse=T, out.width="80%"}
+model3_plot1
+```
+
+# 다중 선형 회귀 
+Normal Q-Q는 잔차가 정규 분포를 따르는지 확인하기 위한 Q-Q Plot을 보여준다. Model3의 결과는 Model1 보다 정규성이 조금 덜 만족된다고 볼 수 있다. 
+
+```{r fig.show='hide'}
+model3_plot2 <- ggplot( model3_results, aes( sample = .resid)) +
+  stat_qq()+
+  stat_qq_line() +
+  ggtitle("Normal Q-Q")
+```
+
+# 다중 선형 회귀 
+```{r echo=F, fig.align="center", message=T, warning=T, cache=F, collapse=F, out.width="80%"  }
+model3_plot2
+```
+
+
+
+
+# 다중 선형 회귀 
+TV와 Radio 광고 지출액과 가지고 만든 다중 회귀 모형을 이용해 테스트 데이터의 매출액을 예측해보자.
+```{r}
+pred3 <- predict(model3, test)
+test$Pred3 <- pred3
+mse3 <- mean((test$Sales - test$Pred3)^2)
+```
+
+
+# 다중 선형 회귀 
+Model1과 Model3의 MSE를 비교해보면 MSE1는 16.34391이고 MSE3는 5.159816이다. 즉 선형 회귀 모형에서 여러가지 변수를 추가함으로써 데이터의 변동성을 더 잘 설명할 수 있다고 말할 수 있다. 
+```{r}
+mse1
+mse3
+```
+
+
+
+
+
+
